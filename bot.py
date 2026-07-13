@@ -166,7 +166,13 @@ async def start_workout(message: Message):
 
 async def show_next_set(message: Message):
 
+    await message.answer(
+        text,
+        reply_markup=WORKOUT_MENU
+    )
+
     @dp.message(F.text == "⏹ Завершить тренировку")
+
 async def ask_stop(message: Message):
 
     user = get_user(message.from_user.id)
