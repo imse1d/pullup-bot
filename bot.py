@@ -42,22 +42,6 @@ MENU = ReplyKeyboardMarkup(
 
 )
 
-WORKOUT_MENU = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="⏹ Завершить тренировку")]
-    ],
-    resize_keyboard=True
-)
-
-CONFIRM_STOP_MENU = ReplyKeyboardMarkup(
-    keyboard=[
-        [
-            KeyboardButton(text="✅ Да"),
-            KeyboardButton(text="⬅ Продолжить")
-        ]
-    ],
-    resize_keyboard=True
-)
 
 def load_data():
 
@@ -138,23 +122,30 @@ async def start_workout(message: Message):
 
         return
 
-    user["current"] = None
     workout_number = len(user["history"]) + 1
 
     plan = current_plan(workout_number)
 
     user["current"] = {
+
         "number": workout_number,
+
         "date": datetime.now().strftime("%d.%m.%Y"),
+
         "exercise": "pullups",
+
         "set": 0,
+
         "plan": plan,
+
         "results": {
+
             "pullups": [],
+
             "dips": []
-        },
-        "status": "IN_PROGRESS",
-        "confirm_stop": False
+
+        }
+
     }
 
     save_data(db)
@@ -231,63 +222,10 @@ async def show_next_set(message: Message):
     if previous is not None:
         msg += f"Прошлый раз: {previous}\n"
 
-        msg += "\nВведите количество повторений."
+    msg += "\nВведите количество повторений."
 
-    await message.answer(
+    await message.answer(msg)
 
-        reply_markup=WORKOUT_MENU
-
-    )
-
-@dp.message(F.text == "⏹ Завершить тренировку")
-async def ask_stop(message: Message):
-
-    user = get_user(message.from_user.id)
-
-    if user["current"] is None:
-        return
-
-    user["current"]["confirm_stop"] = True
-    save_data(db)
-
-    await message.answer(
-        "Завершить тренировку?\n\n"
-        "Все оставшиеся подходы будут автоматически сохранены значением 0.",
-        reply_markup=CONFIRM_STOP_MENU
-    )
-
-@dp.message(F.text == "⬅ Продолжить")
-async def continue_training(message: Message):
-
-    user = get_user(message.from_user.id)
-
-    if user["current"] is None:
-        return
-
-    user["current"]["confirm_stop"] = False
-    save_data(db)
-
-    await show_next_set(message)
-
-@dp.message(F.text == "✅ Да")
-async def stop_training(message: Message):
-
-    user = get_user(message.from_user.id)
-
-    if user["current"] is None:
-        return
-
-    current = user["current"]
-
-    if not current.get("confirm_stop"):
-        return
-
-    current["confirm_stop"] = False
-    current["status"] = "INTERRUPTED"
-
-    fill_remaining(current)
-
-    await finish_workout(message)
 
 @dp.message(F.text.regexp(r"^\d+$"))
 async def save_result(message: Message):
@@ -295,15 +233,6 @@ async def save_result(message: Message):
     user = get_user(message.from_user.id)
 
     if user["current"] is None:
-        return
-
-    current = user["current"]
-
-    if user["current"].get("confirm_stop"):
-        await message.answer(
-        "Подтвердите завершение тренировки или продолжите тренировку.",
-        reply_markup=CONFIRM_STOP_MENU
-        )
         return
 
     current = user["current"]
@@ -320,115 +249,42 @@ async def save_result(message: Message):
 
     await show_next_set(message)
 
-    def fill_remaining(current):
-
-        exercise = current["exercise"]
-
-        current_set = current["set"]
-
-        # Если остановились на подтягиваниях —
-        # дополняем оставшиеся подтягивания
-        if exercise == "pullups":
-
-            pull_plan = current["plan"]["pullups"]
-
-            while len(current["results"]["pullups"]) < len(pull_plan):
-                current["results"]["pullups"].append(0)
-
-            # и полностью заполняем брусья
-            dip_plan = current["plan"]["dips"]
-
-            while len(current["results"]["dips"]) < len(dip_plan):
-                current["results"]["dips"].append(0)
-
-        # Если остановились уже на брусьях —
-        # подтягивания не трогаем
-        else:
-
-            dip_plan = current["plan"]["dips"]
-
-            while len(current["results"]["dips"]) < len(dip_plan):
-                current["results"]["dips"].append(0)
 
 async def finish_workout(message: Message):
 
     user = get_user(message.from_user.id)
+
     current = user["current"]
 
-    if current.get("status") == "IN_PROGRESS":
-        current["status"] = "COMPLETED"
-
-    current["finish_date"] = datetime.now().strftime("%d.%m.%Y %H:%M")
     user["history"].append(current)
+
     user["current"] = None
 
     save_data(db)
 
-    pull_plan = current["plan"]["pullups"]
-    dip_plan = current["plan"]["dips"]
-
-    pull_fact = current["results"]["pullups"]
-    dip_fact = current["results"]["dips"]
-
-    pull_plan_total = sum(x for x in pull_plan if x != -1)
-    dip_plan_total = sum(x for x in dip_plan if x != -1)
-
-    pull_fact_total = sum(pull_fact)
-    dip_fact_total = sum(dip_fact)
-
-    completed_sets = sum(
-        1
-        for x in pull_fact + dip_fact
-        if x > 0
-    )
-
-    skipped_sets = sum(
-        1
-        for x in pull_fact + dip_fact
-        if x == 0
-    )
-
-    status = (
-        "✅ Завершена"
-        if current["status"] == "COMPLETED"
-        else "⏹ Прервана"
-    )
+    pullups_total = sum(current["results"]["pullups"])
+    dips_total = sum(current["results"]["dips"])
 
     text = (
-        f"🏋️ Тренировка №{current['number']}\n"
+        f"✅ Тренировка №{current['number']}\n"
         f"{current['date']}\n\n"
-
-        f"Подтягивания\n"
-        f"План: {pull_plan_total}\n"
-        f"Факт: {pull_fact_total}\n\n"
-
-        f"Брусья\n"
-        f"План: {dip_plan_total}\n"
-        f"Факт: {dip_fact_total}\n\n"
-
-        f"Выполнено подходов: {completed_sets}\n"
-        f"Пропущено подходов: {skipped_sets}\n\n"
-
-        f"Статус: {status}"
+        f"Подтягивания: {pullups_total}\n"
+        f"Брусья: {dips_total}"
     )
 
     if len(user["history"]) >= 2:
 
         prev = user["history"][-2]
 
-        prev_pull = sum(prev["results"]["pullups"])
+        prev_pullups = sum(prev["results"]["pullups"])
         prev_dips = sum(prev["results"]["dips"])
 
         text += (
-            f"\n\n"
-            f"Δ Подтягивания: {pull_fact_total - prev_pull:+d}\n"
-            f"Δ Брусья: {dip_fact_total - prev_dips:+d}"
+            f"\n\nΔ Подтягивания: {pullups_total - prev_pullups:+d}"
+            f"\nΔ Брусья: {dips_total - prev_dips:+d}"
         )
 
-    await message.answer(
-        msg,
-        reply_markup=MENU
-    )
+    await message.answer(text, reply_markup=MENU)
 
 @dp.message(F.text == "📊 История")
 async def history(message: Message):
@@ -449,25 +305,26 @@ async def history(message: Message):
 
         dips = sum(workout["results"]["dips"])
 
-        status = workout.get("status") or "COMPLETED"
-
-        status_text = (
-            "✅ Завершена"
-            if status == "COMPLETED"
-            else "⏹ Прервана"
-        )
-
         lines.append(
+
             "\n".join(
+
                 [
+
                     f"№{workout['number']}",
+
                     workout["date"],
-                    status_text,
-                    f"Подтягивания: {sum(workout['results']['pullups'])}",
-                    f"Брусья: {sum(workout['results']['dips'])}",
+
+                    f"Подтягивания: {pullups}",
+
+                    f"Брусья: {dips}",
+
                     "────────────"
+
                 ]
+
             )
+
         )
 
     await message.answer(
