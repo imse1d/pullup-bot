@@ -295,14 +295,16 @@ async def save_result(message: Message):
     user = get_user(message.from_user.id)
 
     if user["current"] is None:
-    return
+        return
+
+    current = user["current"]
 
     if user["current"].get("confirm_stop"):
-    await message.answer(
+        await message.answer(
         "Подтвердите завершение тренировки или продолжите тренировку.",
         reply_markup=CONFIRM_STOP_MENU
-    )
-    return
+        )
+        return
 
     current = user["current"]
 
