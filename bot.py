@@ -161,12 +161,16 @@ async def start_workout(message: Message):
 
     save_data(db)
 
-    await show_next_set(message)
+    await message.answer(
+    msg,
+    reply_markup=WORKOUT_MENU
+)
 
 
 async def show_next_set(message: Message):
 
     @dp.message(F.text == "⏹ Завершить тренировку")
+
 async def ask_stop(message: Message):
 
     @dp.message(F.text == "⬅ Продолжить")
