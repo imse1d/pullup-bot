@@ -133,14 +133,14 @@ async def start_workout(message: Message):
 
     user = get_user(message.from_user.id)
 
-    workout_number = len(user["history"]) + 1
-    
     if user["current"] is not None:
 
         await show_next_set(message)
 
         return
 
+    user["current"] = None
+    
     workout_number = len(user["history"]) + 1
 
     plan = current_plan(workout_number)
@@ -157,20 +157,16 @@ async def start_workout(message: Message):
         },
         "status": "IN_PROGRESS",
         "confirm_stop": False
-}
+    }
 
     save_data(db)
 
-    await message.answer(
-    msg,
-    reply_markup=WORKOUT_MENU
-)
+    await show_next_set(message)
 
 
 async def show_next_set(message: Message):
 
     @dp.message(F.text == "⏹ Завершить тренировку")
-
 async def ask_stop(message: Message):
 
     @dp.message(F.text == "⬅ Продолжить")
@@ -290,10 +286,9 @@ async def stop_training(message: Message):
     msg += "\nВведите количество повторений."
 
     await message.answer(
-    msg,
-    reply_markup=WORKOUT_MENU
-)
-
+        msg,
+        reply_markup=WORKOUT_MENU
+    )
 
 @dp.message(F.text.regexp(r"^\d+$"))
 async def save_result(message: Message):
@@ -310,9 +305,6 @@ async def save_result(message: Message):
     )
     return
 
-    if user["current"] is None:
-        return
-
     current = user["current"]
 
     exercise = current["exercise"]
@@ -327,7 +319,7 @@ async def save_result(message: Message):
 
     await show_next_set(message)
 
-     def fill_remaining(current):
+    def fill_remaining(current):
 
         exercise = current["exercise"]
 
