@@ -59,7 +59,6 @@ CONFIRM_STOP_MENU = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-
 def load_data():
 
     if not os.path.exists(DATA_FILE):
@@ -140,7 +139,6 @@ async def start_workout(message: Message):
         return
 
     user["current"] = None
-    
     workout_number = len(user["history"]) + 1
 
     plan = current_plan(workout_number)
@@ -165,62 +163,6 @@ async def start_workout(message: Message):
 
 
 async def show_next_set(message: Message):
-
-    await message.answer(
-        text,
-        reply_markup=WORKOUT_MENU
-    )
-
-    @dp.message(F.text == "⏹ Завершить тренировку")
-
-async def ask_stop(message: Message):
-
-    user = get_user(message.from_user.id)
-
-    if user["current"] is None:
-        return
-
-    user["current"]["confirm_stop"] = False
-    save_data(db)
-
-    await show_next_set(message)
-
-    @dp.message(F.text == "✅ Да")
-async def stop_training(message: Message):
-
-    user = get_user(message.from_user.id)
-
-    if user["current"] is None:
-        return
-
-    current = user["current"]
-
-    if not current.get("confirm_stop"):
-        return
-
-    current["confirm_stop"] = False
-    current["status"] = "INTERRUPTED"
-
-    fill_remaining(current)
-
-    await finish_workout(message)
-
-    user = get_user(message.from_user.id)
-
-    if user["current"] is None:
-        return
-
-    user["current"]["confirm_stop"] = True
-    save_data(db)
-
-    await message.answer(
-        "Завершить тренировку?\n\n"
-        "Все оставшиеся подходы будут автоматически сохранены значением 0.",
-        reply_markup=CONFIRM_STOP_MENU
-    )
-
-    @dp.message(F.text == "⬅ Продолжить")
-async def continue_training(message: Message):
 
     user = get_user(message.from_user.id)
 
@@ -291,10 +233,60 @@ async def continue_training(message: Message):
 
     msg += "\nВведите количество повторений."
 
+   await message.answer(
+    msg,
+    reply_markup=WORKOUT_MENU
+)
+
+@dp.message(F.text == "⏹ Завершить тренировку")
+async def ask_stop(message: Message):
+
+    user = get_user(message.from_user.id)
+
+    if user["current"] is None:
+        return
+
+    user["current"]["confirm_stop"] = True
+    save_data(db)
+
     await message.answer(
-        msg,
-        reply_markup=WORKOUT_MENU
+        "Завершить тренировку?\n\n"
+        "Все оставшиеся подходы будут автоматически сохранены значением 0.",
+        reply_markup=CONFIRM_STOP_MENU
     )
+
+@dp.message(F.text == "⬅ Продолжить")
+async def continue_training(message: Message):
+
+    user = get_user(message.from_user.id)
+
+    if user["current"] is None:
+        return
+
+    user["current"]["confirm_stop"] = False
+    save_data(db)
+
+    await show_next_set(message)
+
+@dp.message(F.text == "✅ Да")
+async def stop_training(message: Message):
+
+    user = get_user(message.from_user.id)
+
+    if user["current"] is None:
+        return
+
+    current = user["current"]
+
+    if not current.get("confirm_stop"):
+        return
+
+    current["confirm_stop"] = False
+    current["status"] = "INTERRUPTED"
+
+    fill_remaining(current)
+
+    await finish_workout(message)
 
 @dp.message(F.text.regexp(r"^\d+$"))
 async def save_result(message: Message):
