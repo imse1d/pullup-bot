@@ -169,9 +169,6 @@ async def show_next_set(message: Message):
     @dp.message(F.text == "⏹ Завершить тренировку")
 async def ask_stop(message: Message):
 
-    @dp.message(F.text == "⬅ Продолжить")
-async def continue_training(message: Message):
-
     user = get_user(message.from_user.id)
 
     if user["current"] is None:
@@ -215,6 +212,9 @@ async def stop_training(message: Message):
         "Все оставшиеся подходы будут автоматически сохранены значением 0.",
         reply_markup=CONFIRM_STOP_MENU
     )
+
+    @dp.message(F.text == "⬅ Продолжить")
+async def continue_training(message: Message):
 
     user = get_user(message.from_user.id)
 
