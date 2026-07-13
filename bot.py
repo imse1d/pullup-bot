@@ -231,12 +231,13 @@ async def show_next_set(message: Message):
     if previous is not None:
         msg += f"Прошлый раз: {previous}\n"
 
-    msg += "\nВведите количество повторений."
+        msg += "\nВведите количество повторений."
 
-   await message.answer(
-    "Меню тренировки",
-    reply_markup=WORKOUT_MENU
-)
+    await message.answer(
+
+        reply_markup=WORKOUT_MENU
+
+    )
 
 @dp.message(F.text == "⏹ Завершить тренировку")
 async def ask_stop(message: Message):
@@ -423,7 +424,7 @@ async def finish_workout(message: Message):
         )
 
     await message.answer(
-        "Меню",
+        msg,
         reply_markup=MENU
     )
 
