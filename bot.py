@@ -234,7 +234,7 @@ async def show_next_set(message: Message):
     msg += "\nВведите количество повторений."
 
    await message.answer(
-    msg,
+    "Меню тренировки",
     reply_markup=WORKOUT_MENU
 )
 
@@ -423,7 +423,7 @@ async def finish_workout(message: Message):
         )
 
     await message.answer(
-        text,
+        "Меню",
         reply_markup=MENU
     )
 
